@@ -1,0 +1,134 @@
+import os
+import subprocess
+
+# Install required packages
+def install_packages():
+    packages = ["diffusers", "transformers", "torch", "pillow"]
+    for package in packages:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+install_packages()
+
+from diffusers import StableDiffusionPipeline
+from transformers import DalleMiniProcessor, DalleMiniForConditionalGeneration
+import torch
+from PIL import Image
+import sys
+
+# Stable Diffusion Image Generation
+def generate_image_stable_diffusion(prompt, model_id="CompVis/stable-diffusion-v1-4", save_path="stable_diffusion_image.png"):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
+    pipe = pipe.to(device)
+    with torch.autocast(device):
+        image = pipe(prompt).images[0]
+    image.save(save_path)
+    image.show()
+
+# DALL-E Mini Image Generation
+def generate_image_dalle_mini(prompt, model_id="dalle-mini/dalle-mini-1.3B", save_path="dalle_mini_image.png"):
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    processor = DalleMiniProcessor.from_pretrained(model_id)
+    model = DalleMiniForConditionalGeneration.from_pretrained(model_id).to(device)
+    inputs = processor(prompt, return_tensors="pt").to(device)
+    outputs = model.generate(**inputs)
+    image = processor.batch_decode(outputs, output_type="pil")[0]
+    image.save(save_path)
+    image.show()
+
+# Create script files
+def create_script_files():
+    stable_diffusion_script = """
+from diffusers import StableDiffusionPipeline
+import torch
+from PIL import Image
+
+# Load the Stable Diffusion model from Hugging Face
+model_id = "CompVis/stable-diffusion-v1-4"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
+pipe = pipe.to(device)
+
+# Function to generate an image from a text prompt
+def generate_image(prompt):
+    with torch.autocast(device):
+        image = pipe(prompt).images[0]
+    return image
+
+# Example prompt
+prompt = "A fantasy landscape with mountains and a river during sunset"
+
+# Generate the image
+image = generate_image(prompt)
+
+# Save the image
+image.save("generated_image.png")
+
+# Display the image
+image.show()
+"""
+    with open("generate_image_stable_diffusion.py", "w") as file:
+        file.write(stable_diffusion_script)
+
+    dalle_mini_script = """
+from transformers import DalleMiniProcessor, DalleMiniForConditionalGeneration
+import torch
+from PIL import Image
+
+# Load the DALL-E mini model from Hugging Face
+model_id = "dalle-mini/dalle-mini-1.3B"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+processor = DalleMiniProcessor.from_pretrained(model_id)
+model = DalleMiniForConditionalGeneration.from_pretrained(model_id).to(device)
+
+# Function to generate an image from a text prompt
+def generate_image(prompt):
+    inputs = processor(prompt, return_tensors="pt").to(device)
+    outputs = model.generate(**inputs)
+    image = processor.batch_decode(outputs, output_type="pil")[0]
+    return image
+
+# Example prompt
+prompt = "A futuristic cityscape at night with neon lights"
+
+# Generate the image
+image = generate_image(prompt)
+
+# Save the image
+image.save("dalle_mini_generated_image.png")
+
+# Display the image
+image.show()
+"""
+    with open("generate_image_dalle_mini.py", "w") as file:
+        file.write(dalle_mini_script)
+
+# Git operations
+def git_operations():
+    repo_url = "https://github.com/your_username/PRODIGY_GAI_02.git"
+    commands = [
+        "git init",
+        "git add generate_image_stable_diffusion.py generate_image_dalle_mini.py",
+        'git commit -m "Add scripts for image generation using Stable Diffusion and DALL-E Mini"',
+        f"git remote add origin {repo_url}",
+        "git push -u origin master"
+    ]
+    for command in commands:
+        subprocess.run(command, shell=True)
+
+def main():
+    # Generate images
+    generate_image_stable_diffusion("A fantasy landscape with mountains and a river during sunset")
+    generate_image_dalle_mini("A futuristic cityscape at night with neon lights")
+
+    # Create script files
+    create_script_files()
+
+    # Perform git operations
+    git_operations()
+
+if __name__ == "__main__":
+    main()
+python generate_and_push_images.py
